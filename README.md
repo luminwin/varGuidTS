@@ -20,7 +20,7 @@ applies to other high-frequency or repeated-measures panel time series.
 # From CRAN, once released
 install.packages("varGuidTS")
 
-# From the project repository
+# From GitHub
 install.packages("remotes")
 remotes::install_github("luminwin/varGuidTS")
 ```
@@ -102,6 +102,10 @@ how likely a future or held-out observation is to exceed a chosen threshold,
 conditional on the estimated mean, variance, covariates, and lagged history. It
 should not be interpreted as a clinically validated diagnostic probability unless
 validated in a prospective clinical study.
+
+## Reference
+
+Wang, Z. and Lu, M. (2026). *Variance-Aware Penalized Panel Models for Temporal Risk Detection from Wearable Sensor Data* (submitted).
 
 ## Maintainer
 
