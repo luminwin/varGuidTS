@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Zihao Wang and Min Lu" />
+  <title>Variance-Guided Time-Series Modeling with varGuidTS</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Variance-Guided Time-Series Modeling with
+varGuidTS</h1>
+<p class="author">Zihao Wang and Min Lu</p>
+</header>
+<h1 id="overview">Overview</h1>
+<p><code>varGuidTS</code> implements variance-guided penalized panel
+time-series models for personalized temporal risk assessment. The
+package combines an autoregressive exogenous mean model with a GARCH-X
+variance model, allowing both the expected level and the variability of
+a repeated signal to depend on covariates.</p>
+<p>The workflow is especially useful for wearable-sensor panels, where
+multimodal physiological streams often show subject-specific baselines,
+short-memory dynamics, motion artifacts, and time-varying volatility.
+The same modeling structure can also be used for other balanced panel
+time series with repeated measurements across individuals, devices,
+sites, or experimental units.</p>
+<p>The package estimates:</p>
+<ul>
+<li>conditional mean dynamics with autoregressive and distributed-lag
+covariate effects;</li>
+<li>conditional variance dynamics with ARCH/GARCH terms and optional
+covariate effects;</li>
+<li>subject-specific baseline terms for both the mean and variance
+equations;</li>
+<li>sparse shared covariate effects through
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mo>ℓ</mo><mn>1</mn></msub><annotation encoding="application/x-tex">\ell_1</annotation></semantics></math>
+penalization;</li>
+<li>exceedance-based risk scores, defined as conditional
+threshold-exceedance probabilities.</li>
+</ul>
+<h1 id="data-layout">Data layout</h1>
+<p>The input data frame must contain at least three columns:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>s</code></td>
+<td>subject, panel, or unit identifier</td>
+</tr>
+<tr class="even">
+<td><code>t</code></td>
+<td>integer time index within subject/unit</td>
+</tr>
+<tr class="odd">
+<td><code>y</code></td>
+<td>response or signal of interest</td>
+</tr>
+</tbody>
+</table>
+<p>All remaining columns are treated as exogenous predictors, except
+oracle columns created by <code>simulate_scenario()</code> such as
+<code>mu</code>, <code>sigma</code>, <code>pi_true</code>, and
+<code>scenario</code>, which are ignored by <code>lmvt()</code>.</p>
+<h1 id="model-specification">Model specification</h1>
+<p>Let
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>y</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><annotation encoding="application/x-tex">y_{s,t}</annotation></semantics></math>
+be the response for subject or unit
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>
+at time
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>,
+and let
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>x</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><annotation encoding="application/x-tex">x_{s,t}</annotation></semantics></math>
+be a vector of exogenous predictors. The model decomposes the signal
+as</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>y</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>=</mo><msub><mi>μ</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>+</mo><msub><mi>σ</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><msub><mi>ε</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>,</mo></mrow><annotation encoding="application/x-tex">
+y_{s,t} = \mu_{s,t} + \sigma_{s,t}\varepsilon_{s,t},
+</annotation></semantics></math></p>
+<p>where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>ε</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>∣</mo><msub><mi>x</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>,</mo><msub><mi>ℱ</mi><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">E(\varepsilon_{s,t} \mid x_{s,t}, \mathcal F_{t-1}) = 0</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">V</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">r</mi></mrow><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>ε</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>∣</mo><msub><mi>x</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>,</mo><msub><mi>ℱ</mi><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\mathrm{Var}(\varepsilon_{s,t} \mid x_{s,t}, \mathcal F_{t-1}) = 1</annotation></semantics></math>.
+Thus
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>μ</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><annotation encoding="application/x-tex">\mu_{s,t}</annotation></semantics></math>
+is the conditional mean and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>σ</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><annotation encoding="application/x-tex">\sigma_{s,t}</annotation></semantics></math>
+is the conditional standard deviation.</p>
+<h2 id="model-orders">Model orders</h2>
+<p>The function <code>lmvt()</code> specifies the model using four order
+parameters:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Argument</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>p</code></td>
+<td>autoregressive order in the mean, using lags of <code>y</code></td>
+</tr>
+<tr class="even">
+<td><code>q</code></td>
+<td>distributed-lag order for exogenous predictors <code>x</code></td>
+</tr>
+<tr class="odd">
+<td><code>r</code></td>
+<td>ARCH order in the variance, using lags of squared residuals</td>
+</tr>
+<tr class="even">
+<td><code>s_ord</code></td>
+<td>GARCH order in the variance, using lags of conditional variance</td>
+</tr>
+</tbody>
+</table>
+<p>When <code>use_x_in_variance = TRUE</code>, the same lag block of
+predictors
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>x</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>,</mo><msub><mi>x</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>,</mo><mi>…</mi><mo>,</mo><msub><mi>x</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi><mo>−</mo><mi>q</mi></mrow></msub><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(x_{s,t}, x_{s,t-1}, \ldots, x_{s,t-q})</annotation></semantics></math>
+enters both the mean and variance equations. This choice keeps the model
+parsimonious and stable when the number of time points per unit is
+modest.</p>
+<h2 id="mean-equation">Mean equation</h2>
+<p>The ARX mean model is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>μ</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>=</mo><msub><mi>α</mi><mi>s</mi></msub><mo>+</mo><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>p</mi></munderover><msub><mi>θ</mi><mi>i</mi></msub><msub><mi>y</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi><mo>−</mo><mi>i</mi></mrow></msub><mo>+</mo><munderover><mo>∑</mo><mrow><mi>j</mi><mo>=</mo><mn>0</mn></mrow><mi>q</mi></munderover><msubsup><mi>x</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi><mo>−</mo><mi>j</mi></mrow><mi>⊤</mi></msubsup><msub><mi>β</mi><mi>j</mi></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\mu_{s,t} = \alpha_s + \sum_{i=1}^{p}\theta_i y_{s,t-i}
++ \sum_{j=0}^{q} x_{s,t-j}^{\top}\beta_j.
+</annotation></semantics></math></p>
+<p>The subject-specific intercept
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>α</mi><mi>s</mi></msub><annotation encoding="application/x-tex">\alpha_s</annotation></semantics></math>
+captures baseline differences, while
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>θ</mi><mi>i</mi></msub><annotation encoding="application/x-tex">\theta_i</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>β</mi><mi>j</mi></msub><annotation encoding="application/x-tex">\beta_j</annotation></semantics></math>
+are shared population-level effects. The covariate coefficients
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>β</mi><mi>j</mi></msub><annotation encoding="application/x-tex">\beta_j</annotation></semantics></math>
+can be estimated under an
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mo>ℓ</mo><mn>1</mn></msub><annotation encoding="application/x-tex">\ell_1</annotation></semantics></math>
+penalty controlled by <code>lambda_beta</code>.</p>
+<h2 id="variance-equation">Variance equation</h2>
+<p>The GARCH-X variance model is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>σ</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow><mn>2</mn></msubsup><mo>=</mo><msub><mi>ω</mi><mi>s</mi></msub><mo>+</mo><munderover><mo>∑</mo><mrow><mo>ℓ</mo><mo>=</mo><mn>1</mn></mrow><msub><mi>s</mi><mrow><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">d</mi></mrow></msub></munderover><msub><mi>b</mi><mo>ℓ</mo></msub><msubsup><mi>σ</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi><mo>−</mo><mo>ℓ</mo></mrow><mn>2</mn></msubsup><mo>+</mo><munderover><mo>∑</mo><mrow><mi>h</mi><mo>=</mo><mn>1</mn></mrow><mi>r</mi></munderover><msub><mi>a</mi><mi>h</mi></msub><msubsup><mi>e</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi><mo>−</mo><mi>h</mi></mrow><mn>2</mn></msubsup><mo>+</mo><munderover><mo>∑</mo><mrow><mi>j</mi><mo>=</mo><mn>0</mn></mrow><mi>q</mi></munderover><msubsup><mi>x</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi><mo>−</mo><mi>j</mi></mrow><mi>⊤</mi></msubsup><msub><mi>γ</mi><mi>j</mi></msub><mo>,</mo></mrow><annotation encoding="application/x-tex">
+\sigma_{s,t}^2 = \omega_s
++ \sum_{\ell=1}^{s_{\mathrm{ord}}} b_\ell \sigma_{s,t-\ell}^2
++ \sum_{h=1}^{r} a_h e_{s,t-h}^2
++ \sum_{j=0}^{q} x_{s,t-j}^{\top}\gamma_j,
+</annotation></semantics></math></p>
+<p>where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>=</mo><msub><mi>y</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>−</mo><msub><mi>μ</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub></mrow><annotation encoding="application/x-tex">e_{s,t}=y_{s,t}-\mu_{s,t}</annotation></semantics></math>.
+The baseline variance
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>ω</mi><mi>s</mi></msub><annotation encoding="application/x-tex">\omega_s</annotation></semantics></math>
+is subject-specific, while the ARCH parameters
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>a</mi><mi>h</mi></msub><annotation encoding="application/x-tex">a_h</annotation></semantics></math>,
+GARCH parameters
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>b</mi><mo>ℓ</mo></msub><annotation encoding="application/x-tex">b_\ell</annotation></semantics></math>,
+and variance covariate effects
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>γ</mi><mi>j</mi></msub><annotation encoding="application/x-tex">\gamma_j</annotation></semantics></math>
+are shared across units. The variance covariate effects can be penalized
+through <code>lambda_gamma</code>.</p>
+<p>The implementation enforces positive variance through non-negativity
+constraints and prediction-time feasibility repair.</p>
+<h1 id="basic-workflow">Basic workflow</h1>
+<p>Prepare a balanced panel with columns for subject ID <code>s</code>,
+time index <code>t</code>, response <code>y</code>, and covariates. Fit
+the penalized ARX–GARCHX model using <code>lmvt()</code>. Use
+<code>summary()</code> to inspect selected mean and variance covariates.
+Use <code>predict()</code> to compute conditional means, variances, and
+exceedance-based risk scores.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(varGuidTS)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>sim <span class="ot">&lt;-</span> <span class="fu">simulate_scenario</span>(<span class="at">scen =</span> <span class="dv">2</span>, <span class="at">S =</span> <span class="dv">4</span>, <span class="at">T =</span> <span class="dv">60</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>                         <span class="at">d_noise =</span> <span class="dv">4</span>, <span class="at">noise_kind =</span> <span class="st">&quot;ar1&quot;</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> sim[, <span class="fu">c</span>(<span class="st">&quot;s&quot;</span>, <span class="st">&quot;t&quot;</span>, <span class="st">&quot;y&quot;</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>              <span class="fu">grep</span>(<span class="st">&quot;^X|^Noise|^Xbin&quot;</span>, <span class="fu">names</span>(sim), <span class="at">value =</span> <span class="cn">TRUE</span>))]</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lmvt</span>(df, <span class="at">p =</span> <span class="dv">1</span>, <span class="at">q =</span> <span class="dv">0</span>, <span class="at">r =</span> <span class="dv">1</span>, <span class="at">s_ord =</span> <span class="dv">1</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            <span class="at">lambda_beta =</span> <span class="fl">0.05</span>, <span class="at">lambda_gamma =</span> <span class="fl">0.05</span>,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>            <span class="at">use_x_in_variance =</span> <span class="cn">TRUE</span>, <span class="at">maxit =</span> <span class="dv">8</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>fit</span></code></pre></div>
+<h1 id="coefficient-summaries">Coefficient summaries</h1>
+<p>The <code>summary()</code> method returns model-level information and
+a coefficient table containing coefficient block, equation, term name,
+estimate, absolute estimate, subject identifier for subject-specific
+terms, and a selected/nonzero indicator.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>sm <span class="ot">&lt;-</span> <span class="fu">summary</span>(fit, <span class="at">include_zero =</span> <span class="cn">FALSE</span>, <span class="at">sort_by =</span> <span class="st">&quot;abs_estimate&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>sm<span class="sc">$</span>model</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>sm<span class="sc">$</span>nonzero</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(sm<span class="sc">$</span>table)</span></code></pre></div>
+<h1 id="prediction-and-exceedance-based-risk-scores">Prediction and
+exceedance-based risk scores</h1>
+<p>The <code>predict()</code> method returns estimated conditional means
+and variances. When a threshold is supplied, it also returns exceedance
+probabilities. A single pooled threshold may be used, or a vector of
+subject-specific thresholds may be supplied with names matching the
+subject IDs.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Pooled threshold</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>pred_global <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit, df, <span class="at">threshold =</span> <span class="fu">quantile</span>(df<span class="sc">$</span>y, <span class="fl">0.90</span>))</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(pred_global)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Subject-specific thresholds</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>subject_cutoffs <span class="ot">&lt;-</span> <span class="fu">tapply</span>(df<span class="sc">$</span>y, df<span class="sc">$</span>s, quantile, <span class="at">probs =</span> <span class="fl">0.75</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>pred_subject <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit, df,</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>                        <span class="at">threshold =</span> subject_cutoffs,</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>                        <span class="at">innov_g =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>                        <span class="at">innov_t =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>                        <span class="at">df_t =</span> <span class="dv">8</span>)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(pred_subject)</span></code></pre></div>
+<p>Here <code>df_t = 8</code> specifies 8 degrees of freedom for the
+standardized Student-t innovation distribution used to compute
+<code>risk_t</code>; it is not related to the example data frame named
+<code>df</code>.</p>
+<p>Mathematically, for a threshold
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math>,
+the score is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover><mi>π</mi><mo accent="true">̂</mo></mover><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><mrow><mo stretchy="true" form="prefix">(</mo><mi>c</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mi>P</mi><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>Y</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>&gt;</mo><mi>c</mi><mo>∣</mo><msub><mi>ℱ</mi><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>x</mi><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mn>1</mn><mo>−</mo><msub><mi>F</mi><mi>ε</mi></msub><mrow><mo stretchy="true" form="prefix">(</mo><mfrac><mrow><mi>c</mi><mo>−</mo><msub><mover><mi>μ</mi><mo accent="true">̂</mo></mover><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub></mrow><msub><mover><mi>σ</mi><mo accent="true">̂</mo></mover><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow></msub></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\hat\pi_{s,t}(c) = P(Y_{s,t} &gt; c \mid \mathcal F_{t-1}, x_{s,t})
+= 1 - F_\varepsilon\left(\frac{c - \hat\mu_{s,t}}{\hat\sigma_{s,t}}\right).
+</annotation></semantics></math></p>
+<h1 id="simulation-scenarios">Simulation scenarios</h1>
+<p><code>simulate_scenario()</code> provides four canonical scenarios
+for examples and method checks:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Scenario</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>scen = 1</code></td>
+<td>baseline setting with stable variance</td>
+</tr>
+<tr class="even">
+<td><code>scen = 2</code></td>
+<td>mean-driven drift or seasonality</td>
+</tr>
+<tr class="odd">
+<td><code>scen = 3</code></td>
+<td>short regime-driven variance bursts</td>
+</tr>
+<tr class="even">
+<td><code>scen = 4</code></td>
+<td>seasonal structure with piecewise variance regimes and heavy-tailed
+innovations</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>s1 <span class="ot">&lt;-</span> <span class="fu">simulate_scenario</span>(<span class="at">scen =</span> <span class="dv">1</span>, <span class="at">S =</span> <span class="dv">3</span>, <span class="at">T =</span> <span class="dv">50</span>, <span class="at">d_noise =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">10</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>s2 <span class="ot">&lt;-</span> <span class="fu">simulate_scenario</span>(<span class="at">scen =</span> <span class="dv">2</span>, <span class="at">S =</span> <span class="dv">3</span>, <span class="at">T =</span> <span class="dv">50</span>, <span class="at">d_noise =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">20</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>s3 <span class="ot">&lt;-</span> <span class="fu">simulate_scenario</span>(<span class="at">scen =</span> <span class="dv">3</span>, <span class="at">S =</span> <span class="dv">3</span>, <span class="at">T =</span> <span class="dv">50</span>, <span class="at">d_noise =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">30</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>s4 <span class="ot">&lt;-</span> <span class="fu">simulate_scenario</span>(<span class="at">scen =</span> <span class="dv">4</span>, <span class="at">S =</span> <span class="dv">3</span>, <span class="at">T =</span> <span class="dv">50</span>, <span class="at">d_noise =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">40</span>)</span></code></pre></div>
+<p>The simulation output contains oracle columns such as
+<code>mu</code>, <code>sigma</code>, and <code>pi_true</code>, which are
+useful for method checks but are ignored when fitting the model.</p>
+<h1 id="interpretation">Interpretation</h1>
+<p>The exceedance-based risk score is a statistical summary of
+conditional threshold-exceedance behavior. It can be used as an
+interpretable temporal feature or as an input to downstream modeling. It
+should not be interpreted as a clinically validated diagnostic
+probability unless validated in an appropriate prospective study.</p>
+</body>
+</html>

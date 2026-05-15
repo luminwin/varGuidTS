@@ -1,0 +1,29 @@
+Package: varGuidTS
+Version: 0.1.9
+Date: 2026-05-15
+Title: Variance-Guided Time-Series Modeling for Temporal Risk Detection
+Authors@R: c(person("Zihao", "Wang", role = "aut"),
+  person("Min", "Lu", email = "luminwin@gmail.com", role = c("aut", "cre")))
+Author: Zihao Wang [aut],
+  Min Lu [aut, cre]
+Maintainer: Min Lu <luminwin@gmail.com>
+BugReports: https://github.com/zionwzz/variance-guided-risk-demo/issues
+Depends: R (>= 4.1.0)
+Imports: stats, glmnet
+Suggests: testthat (>= 3.0.0), knitr, rmarkdown
+Description: Fits balanced-panel autoregressive models with conditional
+  heteroscedasticity for temporal risk detection. The main estimator combines
+  autoregressive exogenous mean modeling with GARCH-X variance modeling,
+  subject-specific baseline terms, shared population coefficients, and L1
+  penalization for high-dimensional covariates. The package returns
+  conditional mean and variance estimates, coefficient summaries, simulations,
+  and exceedance-based risk scores defined as estimated conditional
+  threshold-exceedance probabilities.
+License: MIT + file LICENSE
+URL: https://github.com/zionwzz/variance-guided-risk-demo
+Encoding: UTF-8
+RoxygenNote: 7.3.2
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+NeedsCompilation: no
+Packaged: 2026-05-15 18:15:00 UTC; minlu

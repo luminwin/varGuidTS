@@ -1,0 +1,202 @@
+---
+title: "Variance-Guided Time-Series Modeling with varGuidTS"
+author: "Zihao Wang and Min Lu"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Variance-Guided Time-Series Modeling with varGuidTS}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Overview
+
+`varGuidTS` implements variance-guided penalized panel time-series models for
+personalized temporal risk assessment. The package combines an autoregressive
+exogenous mean model with a GARCH-X variance model, allowing both the expected
+level and the variability of a repeated signal to depend on covariates.
+
+The workflow is especially useful for wearable-sensor panels, where multimodal
+physiological streams often show subject-specific baselines, short-memory
+dynamics, motion artifacts, and time-varying volatility. The same modeling
+structure can also be used for other balanced panel time series with repeated
+measurements across individuals, devices, sites, or experimental units.
+
+The package estimates:
+
+- conditional mean dynamics with autoregressive and distributed-lag covariate effects;
+- conditional variance dynamics with ARCH/GARCH terms and optional covariate effects;
+- subject-specific baseline terms for both the mean and variance equations;
+- sparse shared covariate effects through \(\ell_1\) penalization;
+- exceedance-based risk scores, defined as conditional threshold-exceedance probabilities.
+
+# Data layout
+
+The input data frame must contain at least three columns:
+
+| Column | Meaning |
+|---|---|
+| `s` | subject, panel, or unit identifier |
+| `t` | integer time index within subject/unit |
+| `y` | response or signal of interest |
+
+All remaining columns are treated as exogenous predictors, except oracle columns
+created by `simulate_scenario()` such as `mu`, `sigma`, `pi_true`, and
+`scenario`, which are ignored by `lmvt()`.
+
+# Model specification
+
+Let \(y_{s,t}\) be the response for subject or unit \(s\) at time \(t\), and
+let \(x_{s,t}\) be a vector of exogenous predictors. The model decomposes the
+signal as
+
+\[
+y_{s,t} = \mu_{s,t} + \sigma_{s,t}\varepsilon_{s,t},
+\]
+
+where \(E(\varepsilon_{s,t} \mid x_{s,t}, \mathcal F_{t-1}) = 0\) and
+\(\mathrm{Var}(\varepsilon_{s,t} \mid x_{s,t}, \mathcal F_{t-1}) = 1\). Thus
+\(\mu_{s,t}\) is the conditional mean and \(\sigma_{s,t}\) is the conditional
+standard deviation.
+
+## Model orders
+
+The function `lmvt()` specifies the model using four order parameters:
+
+| Argument | Description |
+|---|---|
+| `p` | autoregressive order in the mean, using lags of `y` |
+| `q` | distributed-lag order for exogenous predictors `x` |
+| `r` | ARCH order in the variance, using lags of squared residuals |
+| `s_ord` | GARCH order in the variance, using lags of conditional variance |
+
+When `use_x_in_variance = TRUE`, the same lag block of predictors
+\((x_{s,t}, x_{s,t-1}, \ldots, x_{s,t-q})\) enters both the mean and variance
+equations. This choice keeps the model parsimonious and stable when the number
+of time points per unit is modest.
+
+## Mean equation
+
+The ARX mean model is
+
+\[
+\mu_{s,t} = \alpha_s + \sum_{i=1}^{p}\theta_i y_{s,t-i}
++ \sum_{j=0}^{q} x_{s,t-j}^{\top}\beta_j.
+\]
+
+The subject-specific intercept \(\alpha_s\) captures baseline differences, while
+\(\theta_i\) and \(\beta_j\) are shared population-level effects. The covariate
+coefficients \(\beta_j\) can be estimated under an \(\ell_1\) penalty controlled
+by `lambda_beta`.
+
+## Variance equation
+
+The GARCH-X variance model is
+
+\[
+\sigma_{s,t}^2 = \omega_s
++ \sum_{\ell=1}^{s_{\mathrm{ord}}} b_\ell \sigma_{s,t-\ell}^2
++ \sum_{h=1}^{r} a_h e_{s,t-h}^2
++ \sum_{j=0}^{q} x_{s,t-j}^{\top}\gamma_j,
+\]
+
+where \(e_{s,t}=y_{s,t}-\mu_{s,t}\). The baseline variance \(\omega_s\) is
+subject-specific, while the ARCH parameters \(a_h\), GARCH parameters
+\(b_\ell\), and variance covariate effects \(\gamma_j\) are shared across units.
+The variance covariate effects can be penalized through `lambda_gamma`.
+
+The implementation enforces positive variance through non-negativity constraints
+and prediction-time feasibility repair.
+
+# Basic workflow
+
+Prepare a balanced panel with columns for subject ID `s`, time index `t`, response `y`, and covariates.
+Fit the penalized ARX--GARCHX model using `lmvt()`.
+Use `summary()` to inspect selected mean and variance covariates.
+Use `predict()` to compute conditional means, variances, and exceedance-based risk scores.
+
+```{r basic-workflow, eval=FALSE}
+library(varGuidTS)
+
+set.seed(1)
+sim <- simulate_scenario(scen = 2, S = 4, T = 60,
+                         d_noise = 4, noise_kind = "ar1", seed = 1)
+
+df <- sim[, c("s", "t", "y",
+              grep("^X|^Noise|^Xbin", names(sim), value = TRUE))]
+
+fit <- lmvt(df, p = 1, q = 0, r = 1, s_ord = 1,
+            lambda_beta = 0.05, lambda_gamma = 0.05,
+            use_x_in_variance = TRUE, maxit = 8)
+
+fit
+```
+
+# Coefficient summaries
+
+The `summary()` method returns model-level information and a coefficient table containing coefficient block, equation, term name, estimate, absolute estimate, subject identifier for subject-specific terms, and a selected/nonzero indicator.
+
+```{r coefficient-summaries, eval=FALSE}
+sm <- summary(fit, include_zero = FALSE, sort_by = "abs_estimate")
+sm$model
+sm$nonzero
+head(sm$table)
+```
+
+# Prediction and exceedance-based risk scores
+
+The `predict()` method returns estimated conditional means and variances. When a threshold is supplied, it also returns exceedance probabilities. A single pooled threshold may be used, or a vector of subject-specific thresholds may be supplied with names matching the subject IDs.
+
+```{r prediction, eval=FALSE}
+# Pooled threshold
+pred_global <- predict(fit, df, threshold = quantile(df$y, 0.90))
+head(pred_global)
+
+# Subject-specific thresholds
+subject_cutoffs <- tapply(df$y, df$s, quantile, probs = 0.75, na.rm = TRUE)
+
+pred_subject <- predict(fit, df,
+                        threshold = subject_cutoffs,
+                        innov_g = TRUE,
+                        innov_t = TRUE,
+                        df_t = 8)
+head(pred_subject)
+```
+
+Here `df_t = 8` specifies 8 degrees of freedom for the standardized Student-t innovation distribution used to compute `risk_t`; it is not related to the example data frame named `df`.
+
+Mathematically, for a threshold \(c\), the score is
+
+\[
+\hat\pi_{s,t}(c) = P(Y_{s,t} > c \mid \mathcal F_{t-1}, x_{s,t})
+= 1 - F_\varepsilon\left(\frac{c - \hat\mu_{s,t}}{\hat\sigma_{s,t}}\right).
+\]
+
+# Simulation scenarios
+`simulate_scenario()` provides four canonical scenarios for examples and method
+checks:
+
+| Scenario | Description |
+|---|---|
+| `scen = 1` | baseline setting with stable variance |
+| `scen = 2` | mean-driven drift or seasonality |
+| `scen = 3` | short regime-driven variance bursts |
+| `scen = 4` | seasonal structure with piecewise variance regimes and heavy-tailed innovations |
+
+```{r scenarios, eval=FALSE}
+s1 <- simulate_scenario(scen = 1, S = 3, T = 50, d_noise = 3, seed = 10)
+s2 <- simulate_scenario(scen = 2, S = 3, T = 50, d_noise = 3, seed = 20)
+s3 <- simulate_scenario(scen = 3, S = 3, T = 50, d_noise = 3, seed = 30)
+s4 <- simulate_scenario(scen = 4, S = 3, T = 50, d_noise = 3, seed = 40)
+```
+
+The simulation output contains oracle columns such as `mu`, `sigma`, and
+`pi_true`, which are useful for method checks but are ignored when fitting the
+model.
+
+# Interpretation
+
+The exceedance-based risk score is a statistical summary of conditional
+threshold-exceedance behavior. It can be used as an interpretable temporal
+feature or as an input to downstream modeling. It should not be interpreted as a
+clinically validated diagnostic probability unless validated in an appropriate
+prospective study.
